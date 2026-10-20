@@ -35,13 +35,15 @@ jobs:
           gradle --no-daemon assembleDebug > ../build.log 2>&1
           code=$?
           if [ $code -ne 0 ]; then
+            grep -E "^e: " ../build.log | head -20 > ../err.txt
+            sed -n '/What went wrong/,/\* Try/p' ../build.log | head -30 >> ../err.txt
             {
               echo "## Errores de compilacion"
               echo '```'
-              grep -E "^e: |^w: .*error|error:|What went wrong|Could not|Execution failed|Caused by|FAILURE" ../build.log | head -40
+              cat ../err.txt
               echo '```'
             } >> "$GITHUB_STEP_SUMMARY"
-            msg=$(grep -E "^e: |error:|What went wrong|Could not|Execution failed|Caused by" ../build.log | head -20 | sed 's/%/%25/g' | awk 'BEGIN{ORS="%0A"}{print}')
+            msg=$(cat ../err.txt | sed 's/%/%25/g' | awk 'BEGIN{ORS="%0A"}{print}')
             echo "::error title=Fallo la compilacion::${msg}"
           fi
           exit $code

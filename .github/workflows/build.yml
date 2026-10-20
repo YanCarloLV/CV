@@ -30,7 +30,21 @@ jobs:
 
       - name: Compilar
         working-directory: proj
-        run: gradle --no-daemon assembleDebug
+        run: |
+          set +e
+          gradle --no-daemon assembleDebug > ../build.log 2>&1
+          code=$?
+          if [ $code -ne 0 ]; then
+            {
+              echo "## Errores de compilacion"
+              echo '```'
+              grep -E "^e: |^w: .*error|error:|What went wrong|Could not|Execution failed|Caused by|FAILURE" ../build.log | head -40
+              echo '```'
+            } >> "$GITHUB_STEP_SUMMARY"
+            msg=$(grep -E "^e: |error:|What went wrong|Could not|Execution failed|Caused by" ../build.log | head -20 | sed 's/%/%25/g' | awk 'BEGIN{ORS="%0A"}{print}')
+            echo "::error title=Fallo la compilacion::${msg}"
+          fi
+          exit $code
 
       - name: Copiar APK
         run: cp proj/app/build/outputs/apk/debug/app-debug.apk smart-iptv-mx.apk
